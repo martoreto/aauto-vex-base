@@ -1,4 +1,3 @@
-// IVexProxyCallback.aidl
 package com.github.martoreto.aauto.vex;
 
 oneway interface IVexProxyListener {

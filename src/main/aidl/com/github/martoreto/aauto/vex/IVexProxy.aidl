@@ -1,4 +1,3 @@
-// IVexProxy.aidl
 package com.github.martoreto.aauto.vex;
 
 import com.github.martoreto.aauto.vex.IVexProxyListener;

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="vex_stats_permission_label">access car telemetry</string>
+    <string name="vex_stats_permission_desc">Access realtime data from car sensors.</string>
+</resources>
