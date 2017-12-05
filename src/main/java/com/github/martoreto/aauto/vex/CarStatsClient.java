@@ -11,6 +11,7 @@ import android.os.RemoteException;
 import android.util.Log;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -33,23 +34,18 @@ public class CarStatsClient {
         this.mContext = context;
     }
 
-    public static interface Listener {
+    public interface Listener {
         void onNewMeasurements(String provider, Date timestamp, Map<String, Object> values);
     }
 
     public void start() {
-        PackageManager pm = mContext.getPackageManager();
-        Intent implicitIntent = new Intent(ACTION_CAR_STATS_PROVIDER);
-        List<ResolveInfo> resolveInfos = pm.queryIntentServices(implicitIntent, 0);
-        for (ResolveInfo ri: resolveInfos) {
-            ComponentName cn = new ComponentName(ri.serviceInfo.packageName, ri.serviceInfo.name);
-            Intent explicitIntent = new Intent(implicitIntent);
-            explicitIntent.setComponent(cn);
-            String provider = cn.flattenToShortString();
+        for (Intent i: getProviderIntents(mContext)) {
+            //noinspection ConstantConditions
+            String provider = i.getComponent().flattenToShortString();
             ServiceConnection sc = createServiceConnection(provider);
             mServiceConnections.put(provider, sc);
             Log.d(TAG, "Binding to " + provider);
-            mContext.bindService(explicitIntent, sc, Context.BIND_AUTO_CREATE);
+            mContext.bindService(i, sc, Context.BIND_AUTO_CREATE);
         }
     }
 
@@ -127,5 +123,49 @@ public class CarStatsClient {
 
     public void unregisterListener(Listener listener) {
         mListeners.remove(listener);
+    }
+
+    public static Collection<ResolveInfo> getProviderInfos(Context context) {
+        PackageManager pm = context.getPackageManager();
+        Intent implicitIntent = new Intent(ACTION_CAR_STATS_PROVIDER);
+        return pm.queryIntentServices(implicitIntent, 0);
+    }
+
+    public static Collection<Intent> getProviderIntents(Context context) {
+        Collection<ResolveInfo> resolveInfos = getProviderInfos(context);
+        List<Intent> intents = new ArrayList<>(resolveInfos.size());
+        for (ResolveInfo ri: resolveInfos) {
+            ComponentName cn = new ComponentName(ri.serviceInfo.packageName, ri.serviceInfo.name);
+            Intent explicitIntent = new Intent(ACTION_CAR_STATS_PROVIDER);
+            explicitIntent.setComponent(cn);
+            intents.add(explicitIntent);
+        }
+        return intents;
+    }
+
+    public static void requestPermissions(final Context context) {
+        for (final Intent i: getProviderIntents(context)) {
+            final ServiceConnection sc = new ServiceConnection() {
+                @Override
+                public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+                    ICarStats stats = ICarStats.Stub.asInterface(iBinder);
+                    try {
+                        if (stats.needsPermissions()) {
+                            stats.requestPermissions();
+                        }
+                    } catch (RemoteException e) {
+                        //noinspection ConstantConditions
+                        String provider = i.getComponent().flattenToShortString();
+                        Log.w(TAG, provider + ": Error requesting permissions", e);
+                    }
+                    context.unbindService(this);
+                }
+
+                @Override
+                public void onServiceDisconnected(ComponentName componentName) {
+                }
+            };
+            context.bindService(i, sc, Context.BIND_AUTO_CREATE);
+        }
     }
 }

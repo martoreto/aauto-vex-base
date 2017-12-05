@@ -2,4 +2,5 @@
 <resources>
     <string name="vex_stats_permission_label">access car telemetry</string>
     <string name="vex_stats_permission_desc">Access realtime data from car sensors.</string>
+    <string name="vex_permission_not_granted">Denied car access permission, funtionality will be limited.</string>
 </resources>

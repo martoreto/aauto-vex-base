@@ -1,7 +1,9 @@
 package com.github.martoreto.aauto.vex;
 
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
@@ -11,6 +13,7 @@ import android.support.annotation.Nullable;
 import android.support.car.Car;
 import android.support.car.CarConnectionCallback;
 import android.support.car.CarNotConnectedException;
+import android.support.v4.content.ContextCompat;
 import android.util.Log;
 
 import com.google.android.apps.auto.sdk.service.CarVendorExtensionManagerLoader;
@@ -20,6 +23,8 @@ import java.io.IOException;
 
 public abstract class VexProxyService extends Service {
     private static final String TAG = "VexProxy";
+
+    public static final String PERMISSION_VEX = "com.google.android.gms.permission.CAR_VENDOR_EXTENSION";
 
     private static final long RETRY_DELAY_MS = 16000;
 
@@ -201,4 +206,15 @@ public abstract class VexProxyService extends Service {
     }
 
     protected abstract String getVendorChannelName();
+
+    public static boolean needsPermissions(Context context) {
+        return ContextCompat.checkSelfPermission(context, PERMISSION_VEX)
+                != PackageManager.PERMISSION_GRANTED;
+    }
+
+    public static void requestPermissions(Context context) {
+        Intent i = new Intent(context, PermissionsActivity.class);
+        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        context.startActivity(i);
+    }
 }
