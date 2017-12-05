@@ -4,18 +4,15 @@ buildscript {
         google()
     }
     dependencies {
+        classpath 'com.github.dcendents:android-maven-gradle-plugin:2.0'
         classpath 'com.android.tools.build:gradle:3.0.1'
     }
 }
 
-repositories {
-    jcenter()
-    maven { url 'https://maven.google.com' }
-    maven { url 'https://jitpack.io' }
-    google()
-}
-
 apply plugin: 'com.android.library'
+apply plugin: 'com.github.dcendents.android-maven'
+
+group='com.github.martoreto'
 
 android {
     compileSdkVersion 26
@@ -34,6 +31,12 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+}
+
+repositories {
+    jcenter()
+    google()
+    maven { url 'https://jitpack.io' }
 }
 
 dependencies {
