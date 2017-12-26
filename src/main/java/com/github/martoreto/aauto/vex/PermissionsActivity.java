@@ -32,11 +32,10 @@ public class PermissionsActivity extends Activity {
 
         switch (requestCode) {
             case REQUEST_PERMISSION:
-                if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    finish();
-                } else {
+                if (grantResults.length == 1 && grantResults[0] != PackageManager.PERMISSION_GRANTED) {
                     Toast.makeText(this, R.string.vex_permission_not_granted, Toast.LENGTH_SHORT).show();
                 }
+                finish();
                 break;
         }
     }
