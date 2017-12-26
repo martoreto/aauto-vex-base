@@ -20,8 +20,6 @@ import java.util.Map;
 public class CarStatsClient {
     private static final String TAG = "CarStatsClient";
 
-    public static final String PERMISSION_CAR_STATS_PROVIDER = "com.github.martoreto.aauto.vex.BIND_CAR_STATS_PROVIDER";
-
     private static final String ACTION_CAR_STATS_PROVIDER = "com.github.martoreto.aauto.vex.CAR_STATS_PROVIDER";
 
     private Context mContext;

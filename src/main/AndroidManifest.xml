@@ -1,12 +1,6 @@
 <manifest package="com.github.martoreto.aauto.vex"
     xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <permission
-        android:name="com.github.martoreto.aauto.vex.BIND_CAR_STATS_PROVIDER"
-        android:label="@string/vex_stats_permission_label"
-        android:description="@string/vex_stats_permission_desc"
-        android:protectionLevel="normal" />
-
     <application>
         <activity
             android:name=".PermissionsActivity"
