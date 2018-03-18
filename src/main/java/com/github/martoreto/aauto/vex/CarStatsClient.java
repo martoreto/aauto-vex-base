@@ -12,8 +12,10 @@ import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -25,8 +27,11 @@ public class CarStatsClient {
     private Context mContext;
     private Map<String, ServiceConnection> mServiceConnections = new HashMap<>();
     private Map<String, ICarStats> mProviders = new HashMap<>();
+    private List<String> mProvidersByPriority = new ArrayList<>();  // earlier is better
+    private Map<String, String> mProvidersByKey = new HashMap<>();
     private Map<String, ICarStatsListener> mRemoteListeners = new HashMap<>();
     private List<Listener> mListeners = new ArrayList<>();
+    private Map<String, FieldSchema> mSchema = Collections.emptyMap();
 
     public CarStatsClient(Context context) {
         this.mContext = context;
@@ -34,7 +39,7 @@ public class CarStatsClient {
 
     public interface Listener {
         void onNewMeasurements(String provider, Date timestamp, Map<String, Object> values);
-        void onSchemaChanged(String provider);
+        void onSchemaChanged();
     }
 
     public void start() {
@@ -43,6 +48,7 @@ public class CarStatsClient {
             String provider = i.getComponent().flattenToShortString();
             ServiceConnection sc = createServiceConnection(provider);
             mServiceConnections.put(provider, sc);
+            mProvidersByPriority.add(provider);
             Log.d(TAG, "Binding to " + provider);
             mContext.bindService(i, sc, Context.BIND_AUTO_CREATE);
         }
@@ -62,6 +68,7 @@ public class CarStatsClient {
                 } catch (RemoteException e) {
                     Log.w(TAG, provider + ": Error registering listener", e);
                 }
+                updateSchema();
             }
 
             @Override
@@ -74,11 +81,13 @@ public class CarStatsClient {
 
     private ICarStatsListener createListener(final String provider) {
         return new ICarStatsListener.Stub() {
+            @SuppressWarnings("unchecked")
             @Override
             public void onNewMeasurements(long timestamp, Map values) throws RemoteException {
                 for (Listener listener: mListeners) {
                     try {
-                        listener.onNewMeasurements(provider, new Date(timestamp), values);
+                        listener.onNewMeasurements(provider, new Date(timestamp),
+                                filterValues(provider, values));
                     } catch (Exception e) {
                         Log.e(TAG, "Error calling listener", e);
                     }
@@ -87,15 +96,53 @@ public class CarStatsClient {
 
             @Override
             public void onSchemaChanged() throws RemoteException {
-                for (Listener listener: mListeners) {
-                    try {
-                        listener.onSchemaChanged(provider);
-                    } catch (Exception e) {
-                        Log.e(TAG, "Error calling listener", e);
-                    }
-                }
+                updateSchema();
             }
         };
+    }
+
+    private Map<String, Object> filterValues(String provider, Map<String, Object> values) {
+        Map<String, String> providersByKey = mProvidersByKey;
+        Iterator<String> iter = values.keySet().iterator();
+        while (iter.hasNext()) {
+            if (!provider.equals(providersByKey.get(iter.next()))) {
+                iter.remove();
+            }
+        }
+        return values;
+    }
+
+    @SuppressWarnings("unchecked")
+    private synchronized void updateSchema() {
+        Map<String, FieldSchema> schema = new HashMap<>();
+        Map<String, String> providersByKey = new HashMap<>();
+        for (String provider: mProvidersByPriority) {
+            try {
+                Map<String, FieldSchema> providerSchema = mProviders.get(provider).getSchema();
+                for (String key: providerSchema.keySet()) {
+                    if (!providersByKey.containsKey(key)) {
+                        providersByKey.put(key, provider);
+                    }
+                }
+                schema.putAll(providerSchema);
+            } catch (RemoteException e) {
+                Log.w(TAG, provider + ": Error getting schema", e);
+            }
+        }
+        mProvidersByKey = providersByKey;
+        mSchema = schema;
+
+        dispatchSchemaChanged();
+    }
+
+    private void dispatchSchemaChanged() {
+        for (Listener listener: mListeners) {
+            try {
+                listener.onSchemaChanged();
+            } catch (Exception e) {
+                Log.e(TAG, "Error calling listener", e);
+            }
+        }
     }
 
     public void stop() {
@@ -111,6 +158,8 @@ public class CarStatsClient {
         }
 
         mProviders.clear();
+        mProvidersByPriority.clear();
+        mProvidersByKey.clear();
         mRemoteListeners.clear();
         mServiceConnections.clear();
     }
@@ -119,26 +168,18 @@ public class CarStatsClient {
     public Map<String, Object> getMergedMeasurements() {
         Map<String, Object> measurements = new HashMap<>();
         for (Map.Entry<String, ICarStats> e: mProviders.entrySet()) {
+            String provider = e.getKey();
             try {
-                measurements.putAll(e.getValue().getMergedMeasurements());
+                measurements.putAll(filterValues(provider, e.getValue().getMergedMeasurements()));
             } catch (RemoteException e1) {
-                Log.w(TAG, e.getKey() + ": Error getting measurements", e1);
+                Log.w(TAG, provider + ": Error getting measurements", e1);
             }
         }
         return measurements;
     }
 
-    @SuppressWarnings("unchecked")
-    public Map<String, FieldSchema> getSchema() {
-        Map<String, FieldSchema> schema = new HashMap<>();
-        for (Map.Entry<String, ICarStats> e: mProviders.entrySet()) {
-            try {
-                schema.putAll(e.getValue().getSchema());
-            } catch (RemoteException e1) {
-                Log.w(TAG, e.getKey() + ": Error getting schema", e1);
-            }
-        }
-        return schema;
+    public synchronized Map<String, FieldSchema> getSchema() {
+        return Collections.unmodifiableMap(mSchema);
     }
 
     public void registerListener(Listener listener) {
