@@ -9,4 +9,6 @@ interface ICarStats {
 
     boolean needsPermissions();
     void requestPermissions();
+
+    Map getSchema();
 }

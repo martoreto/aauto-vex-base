@@ -34,6 +34,7 @@ public class CarStatsClient {
 
     public interface Listener {
         void onNewMeasurements(String provider, Date timestamp, Map<String, Object> values);
+        void onSchemaChanged(String provider);
     }
 
     public void start() {
@@ -83,6 +84,17 @@ public class CarStatsClient {
                     }
                 }
             }
+
+            @Override
+            public void onSchemaChanged() throws RemoteException {
+                for (Listener listener: mListeners) {
+                    try {
+                        listener.onSchemaChanged(provider);
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error calling listener", e);
+                    }
+                }
+            }
         };
     }
 
@@ -103,6 +115,7 @@ public class CarStatsClient {
         mServiceConnections.clear();
     }
 
+    @SuppressWarnings("unchecked")
     public Map<String, Object> getMergedMeasurements() {
         Map<String, Object> measurements = new HashMap<>();
         for (Map.Entry<String, ICarStats> e: mProviders.entrySet()) {
@@ -113,6 +126,19 @@ public class CarStatsClient {
             }
         }
         return measurements;
+    }
+
+    @SuppressWarnings("unchecked")
+    public Map<String, FieldSchema> getSchema() {
+        Map<String, FieldSchema> schema = new HashMap<>();
+        for (Map.Entry<String, ICarStats> e: mProviders.entrySet()) {
+            try {
+                schema.putAll(e.getValue().getSchema());
+            } catch (RemoteException e1) {
+                Log.w(TAG, e.getKey() + ": Error getting schema", e1);
+            }
+        }
+        return schema;
     }
 
     public void registerListener(Listener listener) {
