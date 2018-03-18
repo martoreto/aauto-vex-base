@@ -118,7 +118,12 @@ public class CarStatsClient {
         Map<String, String> providersByKey = new HashMap<>();
         for (String provider: mProvidersByPriority) {
             try {
-                Map<String, FieldSchema> providerSchema = mProviders.get(provider).getSchema();
+                ICarStats providerInterface = mProviders.get(provider);
+                if (providerInterface == null) {
+                    // Not connected at the moment.
+                    continue;
+                }
+                Map<String, FieldSchema> providerSchema = providerInterface.getSchema();
                 for (String key: providerSchema.keySet()) {
                     if (!providersByKey.containsKey(key)) {
                         providersByKey.put(key, provider);
