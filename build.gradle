@@ -1,11 +1,11 @@
 buildscript {
     repositories {
-        jcenter()
         google()
+        jcenter()
     }
     dependencies {
+        classpath 'com.android.tools.build:gradle:3.1.4'
         classpath 'com.github.dcendents:android-maven-gradle-plugin:2.0'
-        classpath 'com.android.tools.build:gradle:3.1.0'
     }
 }
 
@@ -17,7 +17,6 @@ group='com.github.martoreto'
 android {
     compileSdkVersion 26
     buildToolsVersion '26.0.2'
-
     defaultConfig {
         minSdkVersion 21
         targetSdkVersion 25
@@ -30,8 +29,8 @@ android {
 }
 
 repositories {
-    jcenter()
     google()
+    jcenter()
     maven { url 'https://jitpack.io' }
 }
 
